@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson 1: Your first local LLM call</title>
+<link rel="stylesheet" href="../assets/style.css"></head><body>
+<h1>Your first local LLM call</h1>
+<p class="meta">Lesson 1 · 30 minutes · <a href="../MISSION.md">Mission</a> · <a href="../reference/ollama-python-cheatsheet.html">Cheat sheet</a></p>
+
+<div class="goal"><b>Today's win:</b> a Python script of yours sends a question to a model running on your own GPU, and prints the answer and the speed in tokens per second. This is the base of the morning-briefing agent: every agent step is a call like this one.</div>
+
+<h2>The idea in 4 lines</h2>
+<p>Ollama is a program that runs models on your computer. It starts a small web server on <code>localhost:11434</code>. Your Python code talks to it with the <code>ollama</code> library, which sends HTTP requests to the <a href="https://docs.ollama.com/api/chat">/api/chat</a> endpoint. No cloud, no cost, and your documents stay on your machine.</p>
+
+<h2><span class="step">Step 0</span> · Give WSL more memory (5 min)</h2>
+<p>WSL sees only 7.6 GB of RAM now. The model itself will live in your 8 GB of GPU memory, but more RAM avoids trouble later. In Windows, create <code>C:\Users\&lt;you&gt;\.wslconfig</code>:</p>
+<pre><code>[wsl2]
+memory=12GB</code></pre>
+<p>Use about 70% of your real Windows RAM (12GB is right for a 16 GB laptop; change it if yours differs). Then in PowerShell run <code>wsl --shutdown</code> and open WSL again. Source: <a href="https://learn.microsoft.com/en-us/windows/wsl/wsl-config">Microsoft Learn, .wslconfig</a>.</p>
+
+<h2><span class="step">Step 1</span> · Install Ollama and a model (10 min)</h2>
+<pre><code>curl -fsSL https://ollama.com/install.sh | sh
+ollama -v
+ollama pull llama3.2:3b
+ollama run llama3.2:3b</code></pre>
+<p>The last command opens a chat. Ask something, then type <code>/bye</code>. Install steps: <a href="https://docs.ollama.com/linux">Ollama Linux docs</a>. <code>llama3.2:3b</code> is small (about 2 GB) so it downloads fast; it is a <a href="https://ollama.com/library">tool-capable model</a>. We will test bigger ones later.</p>
+<p>In a second terminal, run <code>nvidia-smi</code> while the chat answers. You should see memory used on the GPU.</p>
+
+<h2><span class="step">Step 2</span> · Call it from Python (10 min)</h2>
+<pre><code>cd ~/llm-learning
+python3 -m venv .venv
+source .venv/bin/activate
+pip install ollama</code></pre>
+<p>Now write this yourself (do not paste; type it, it is short). Create <code>hello_llm.py</code>:</p>
+<pre><code>from ollama import chat
+
+response = chat(
+    model="llama3.2:3b",
+    messages=[{"role": "user", "content": "In one sentence: what is a Python venv?"}],
+)
+
+print(response.message.content)
+
+seconds = response.eval_duration / 1e9
+print(f"{response.eval_count} tokens, {response.eval_count / seconds:.1f} tokens/s")</code></pre>
+<p>Run it: <code>python hello_llm.py</code>. Code pattern from the <a href="https://github.com/ollama/ollama-python">official README</a>; the <code>eval_count</code> and <code>eval_duration</code> fields are described in the <a href="https://docs.ollama.com/api/chat">API docs</a> (duration is in nanoseconds, so we divide by 1e9).</p>
+
+<h2>Experiments (5 min, do at least two)</h2>
+<ul>
+<li>Run the script twice. Is the second run faster? Look at <code>response.load_duration</code>.</li>
+<li>Add <code>stream=True</code> and print chunks as they come (see the <a href="../reference/ollama-python-cheatsheet.html">cheat sheet</a>).</li>
+<li>Ask the same question 3 times. Do you get the same answer? We will use this in the next lesson about <code>temperature</code>.</li>
+</ul>
+
+<h2>Check your memory</h2>
+<div id="quiz"></div>
+<script type="application/json" id="quiz-data">[
+{"q":"Which response field tells you how many tokens were generated?","options":["eval_count, the generated tokens","done_reason, the stop cause","load_duration, the loading time","total_duration, the whole time"],"answer":0,"why":"eval_count = generated tokens; divide by eval_duration (nanoseconds) for tokens per second."},
+{"q":"What does Ollama run on when your Python script calls chat()?","options":["A local server on your PC","A remote cloud API server","A browser tab on Windows","A shared university cluster"],"answer":0,"why":"The library sends HTTP requests to localhost:11434. Nothing leaves your machine."},
+{"q":"Why is the very first call often slower than the next ones?","options":["The model loads into memory","Python compiles your script","The network is checked first","The tokens are counted twice"],"answer":0,"why":"load_duration shows it. The model stays loaded for a while (keep_alive, default 5 minutes)."}
+]</script>
+<script src="../assets/quiz.js"></script>
+
+<h2>Read next</h2>
+<p><b>Primary source:</b> the <a href="https://github.com/ollama/ollama-python">ollama-python README</a> (10 minutes: chat, streaming, Client). Then skim the <a href="https://docs.ollama.com/api/chat">/api/chat page</a> and notice the fields <code>format</code>, <code>options</code>, <code>tools</code>: they are the next lessons.</p>
+
+<div class="ask"><b>Stuck, or something is unclear?</b> Ask your teacher (me) in the next session: paste the error, the output of <code>ollama -v</code>, and what you expected. Questions are part of the lesson.</div>
+</body></html>

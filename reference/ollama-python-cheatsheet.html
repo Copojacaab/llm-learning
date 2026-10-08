@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ollama + Python cheat sheet</title>
+<link rel="stylesheet" href="../assets/style.css"></head><body>
+<h1>Ollama + Python cheat sheet</h1>
+<p class="meta">From <a href="../lessons/0001-first-local-call.html">Lesson 1</a>. Sources: <a href="https://github.com/ollama/ollama-python">ollama-python</a>, <a href="https://docs.ollama.com/api/chat">API docs</a>.</p>
+<h2>Shell</h2>
+<pre><code>ollama -v                 # version / is it installed
+ollama pull llama3.2:3b   # download a model
+ollama run llama3.2:3b    # chat in terminal (/bye to exit)
+ollama list               # downloaded models
+ollama ps                 # models loaded now
+nvidia-smi                # GPU memory use</code></pre>
+<h2>Python</h2>
+<pre><code>pip install ollama
+from ollama import chat
+r = chat(model="llama3.2:3b", messages=[{"role":"user","content":"..."}])
+r.message.content        # the answer
+
+# streaming
+for chunk in chat(model=..., messages=..., stream=True):
+    print(chunk.message.content, end="", flush=True)
+
+# other host
+from ollama import Client
+Client(host="http://localhost:11434").chat(...)</code></pre>
+<h2>Response fields</h2>
+<table>
+<tr><td><code>eval_count</code></td><td>tokens generated</td></tr>
+<tr><td><code>eval_duration</code></td><td>nanoseconds generating</td></tr>
+<tr><td><code>prompt_eval_count</code></td><td>tokens in the prompt</td></tr>
+<tr><td><code>load_duration</code></td><td>nanoseconds loading the model</td></tr>
+<tr><td><code>total_duration</code></td><td>nanoseconds in total</td></tr>
+<tr><td><code>done_reason</code></td><td>why generation stopped</td></tr>
+</table>
+<p>tokens/s = <code>eval_count / (eval_duration / 1e9)</code></p>
+<h2>Request options (later lessons)</h2>
+<p><code>options</code> (temperature, context length) · <code>format</code> (JSON schema) · <code>tools</code> · <code>keep_alive</code> (default 5m; <code>0</code> unloads now)</p>
+</body></html>
