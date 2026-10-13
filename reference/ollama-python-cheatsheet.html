@@ -3,7 +3,7 @@
 <title>Ollama + Python cheat sheet</title>
 <link rel="stylesheet" href="../assets/style.css"></head><body>
 <h1>Ollama + Python cheat sheet</h1>
-<p class="meta">From <a href="../lessons/0001-first-local-call.html">Lesson 1</a>. Sources: <a href="https://github.com/ollama/ollama-python">ollama-python</a>, <a href="https://docs.ollama.com/api/chat">API docs</a>.</p>
+<p class="meta">From <a href="../lessons/0001-first-local-call.html">Lesson 1</a> , <a href="../lessons/0002-repeatable-output.html">Lesson 2</a> and <a href="../lessons/0003-structured-output.html">Lesson 3</a> · <a href="glossary.html">Glossary</a>. Sources: <a href="https://github.com/ollama/ollama-python">ollama-python</a>, <a href="https://docs.ollama.com/api/chat">API docs</a>.</p>
 <h2>Shell</h2>
 <pre><code>ollama -v                 # version / is it installed
 ollama pull llama3.2:3b   # download a model
@@ -17,9 +17,25 @@ from ollama import chat
 r = chat(model="llama3.2:3b", messages=[{"role":"user","content":"..."}])
 r.message.content        # the answer
 
-# streaming
+# streaming: same generation, delivered piece by piece
 for chunk in chat(model=..., messages=..., stream=True):
     print(chunk.message.content, end="", flush=True)
+chunk.eval_count         # statistics are in the LAST chunk (chunk.done is True)
+
+# options: control the sampling
+chat(model=..., messages=..., options={"temperature": 0})
+chat(model=..., messages=..., options={"temperature": 1.5, "seed": 42})
+
+# format: force the shape of the answer with a schema
+from pydantic import BaseModel
+class Invoice(BaseModel):
+    invoice_number: str
+    order_number: str | None      # can be absent: allow None
+    total: float
+r = chat(model=..., messages=..., format=Invoice.model_json_schema(),
+         options={"temperature": 0})
+invoice = Invoice.model_validate_json(r.message.content)   # raises ValidationError
+invoice.model_dump_json()     # object back to one line of JSON
 
 # other host
 from ollama import Client
@@ -34,6 +50,16 @@ Client(host="http://localhost:11434").chat(...)</code></pre>
 <tr><td><code>done_reason</code></td><td>why generation stopped</td></tr>
 </table>
 <p>tokens/s = <code>eval_count / (eval_duration / 1e9)</code></p>
-<h2>Request options (later lessons)</h2>
-<p><code>options</code> (temperature, context length) · <code>format</code> (JSON schema) · <code>tools</code> · <code>keep_alive</code> (default 5m; <code>0</code> unloads now)</p>
+<h2>Sampling options</h2>
+<table>
+<tr><td><code>temperature</code></td><td>randomness of the choice of the next token. Default 0.8. <code>0</code> = always the most likely token = same answer every run.</td></tr>
+<tr><td><code>seed</code></td><td>fixes the random numbers. Same seed + same prompt = same text, also at high temperature.</td></tr>
+</table>
+<p>Extraction, classification, evals: <code>temperature: 0</code>. Text for humans (briefing): default is fine. Source: <a href="https://docs.ollama.com/modelfile">Modelfile parameters</a>.</p>
+<h2>Structured output</h2>
+<p><code>format</code> limits the tokens the model can pick, so the output always has the shape of the schema. It checks shape, not truth: a required field is always filled, also when the document does not have the value. Fields that can be absent: <code>... | None</code>. <code>format="json"</code> gives valid JSON with free field names. Source: <a href="https://docs.ollama.com/capabilities/structured-outputs">structured outputs</a>.</p>
+<h2>Model in memory</h2>
+<p>First call loads the model (<code>load_duration</code>). It stays loaded 5 minutes (<a href="https://docs.ollama.com/faq">FAQ</a>). <code>keep_alive="30m"</code> in <code>chat()</code> keeps it longer; <code>0</code> unloads now; <code>ollama stop llama3.2:3b</code> unloads from the shell.</p>
+<h2>Request fields for later lessons</h2>
+<p><code>tools</code> · <code>options.num_ctx</code> (context length)</p>
 </body></html>

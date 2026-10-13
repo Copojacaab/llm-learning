@@ -1,8 +1,9 @@
+
 :root{--bg:#fffff8;--fg:#111;--muted:#666;--accent:#8a2b0f;--rule:#ddd;--code:#f3f1e6;--ok:#1f6f3a;--bad:#a02020}
 @media (prefers-color-scheme:dark){:root{--bg:#15150f;--fg:#eee;--muted:#999;--accent:#e8a07d;--rule:#333;--code:#22221a;--ok:#6fcf8f;--bad:#f08080}}
 body{background:var(--bg);color:var(--fg);font:18px/1.6 Georgia,"Et Book",serif;max-width:40rem;margin:3rem auto;padding:0 1rem}
-h1{font-weight:400;font-size:2rem;line-height:1.2;margin-bottom:.2rem}
-h2{font-weight:400;font-style:italic;margin-top:2.5rem;border-top:1px solid var(--rule);padding-top:1rem}
+h1{font-weight:600;font-size:2rem;line-height:1.2;margin-bottom:.2rem}
+h2{font-weight:600;font-style:italic;margin-top:2.5rem;border-top:1px solid var(--rule);padding-top:1rem}
 .meta{color:var(--muted);font-size:.9rem}
 a{color:var(--accent)}
 code,pre{font:.85rem/1.5 ui-monospace,Menlo,Consolas,monospace;background:var(--code)}
@@ -19,3 +20,11 @@ pre code{padding:0;background:none}
 .q button.bad{border-color:var(--bad);color:var(--bad)}
 .q .why{font-size:.9rem;color:var(--muted);margin-top:.4rem}
 @media print{body{margin:1rem;font-size:12pt}.q button{border:1px solid #999}}
+table{border-collapse:collapse;width:100%;font-size:.95rem;margin:1rem 0}
+th,td{text-align:left;padding:.35rem .6rem;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-weight:600;font-style:italic;color:var(--muted)}
+td.fill{min-width:6rem;border-bottom:1px dashed var(--muted)}
+details{border:1px solid var(--rule);padding:.5rem 1rem;margin:1rem 0}
+summary{cursor:pointer;color:var(--accent)}
+dt{font-weight:800;margin-top:1rem}
+dd{margin:0 0 0 1rem}

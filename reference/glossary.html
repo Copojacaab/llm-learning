@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Glossary</title>
+<link rel="stylesheet" href="../assets/style.css"></head><body>
+<h1>Glossary</h1>
+<p class="meta">One meaning per word, used the same way in every lesson · <a href="ollama-python-cheatsheet.html">Cheat sheet</a></p>
+<dl>
+<dt>Token</dt>
+<dd>The unit a model reads and writes: a word or a piece of a word. Speed is measured in tokens per second.</dd>
+<dt>Sampling</dt>
+<dd>How the model chooses the next token: it gives a probability to every possible token, then one is picked at random following those probabilities. <a href="https://huggingface.co/blog/how-to-generate">Source</a>. First used in <a href="../lessons/0002-repeatable-output.html">Lesson 2</a>.</dd>
+<dt>Temperature</dt>
+<dd>A number that controls how random the sampling is. Low = likely tokens win more often. <code>0</code> = the most likely token always wins. Ollama default: 0.8. <a href="https://docs.ollama.com/modelfile">Source</a>.</dd>
+<dt>Greedy decoding</dt>
+<dd>Always taking the most likely token. It is what temperature 0 does.</dd>
+<dt>Seed</dt>
+<dd>The starting number of the random generator. Same seed and same prompt give the same text.</dd>
+<dt>Repeatable</dt>
+<dd>Same input gives the same output on every run. It says nothing about the output being correct.</dd>
+<dt>Structured output</dt>
+<dd>An answer forced to follow a JSON schema, with the <code>format</code> field. The limit is applied while tokens are picked, so the shape is always right. The values can still be wrong. <a href="https://docs.ollama.com/capabilities/structured-outputs">Source</a>. First used in <a href="../lessons/0003-structured-output.html">Lesson 3</a>.</dd>
+<dt>JSON schema</dt>
+<dd>A description of the shape of a JSON object: field names, types, which fields are required. You get it from a Pydantic class with <code>model_json_schema()</code>.</dd>
+<dt>Validation</dt>
+<dd>Checking that a text has the fields and types of the schema (<code>model_validate_json</code>). Valid says nothing about the values being correct.</dd>
+<dt>Streaming</dt>
+<dd>Receiving the answer in chunks while it is generated, instead of all at the end. The generation is the same; only the delivery changes. First used in <a href="../lessons/0001-first-local-call.html">Lesson 1</a>.</dd>
+<dt>Chunk</dt>
+<dd>One piece of a streamed answer. The last chunk has <code>done</code> = True and carries the statistics.</dd>
+<dt>Load / keep-alive</dt>
+<dd>Loading copies the model into GPU memory before the first answer. Keep-alive is how long it stays there after a call (default 5 minutes).</dd>
+<dt>Eval</dt>
+<dd>A repeatable test that measures the quality of a model's output on fixed inputs. (Not the same thing as the field <code>eval_count</code>, where "eval" only means "tokens the model computed".)</dd>
+</dl>
+</body></html>

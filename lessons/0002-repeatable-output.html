@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson 2: Repeatable output</title>
+<link rel="stylesheet" href="../assets/style.css"></head><body>
+<h1>Repeatable output: temperature and seed</h1>
+<p class="meta">Lesson 2 · 30 minutes · <a href="../MISSION.md">Mission</a> · <a href="0001-first-local-call.html">Lesson 1</a> · <a href="../reference/ollama-python-cheatsheet.html">Cheat sheet</a> · <a href="../reference/glossary.html">Glossary</a></p>
+
+<div class="goal"><b>Today's win:</b> you write a small tool that asks the same question 10 times and counts the different answers. With it you make the model give the <i>same</i> answer every time. This is your first measuring instrument, and the invoice pipeline needs it: you cannot measure accuracy on something that changes at every run.</div>
+
+<h2>Warm-up: get your tokens/s back (5 min)</h2>
+<p>In lesson 1 you added <code>stream=True</code> and had to comment out the speed lines. The reason: with streaming, <code>chat()</code> does not return one response. It returns a sequence of <a href="../reference/glossary.html">chunks</a>. The statistics (<code>eval_count</code>, <code>eval_duration</code>, <code>load_duration</code>) are in the <b>last</b> chunk, the one where <code>chunk.done</code> is <code>True</code>.</p>
+<p><b>Task:</b> in <code>hello_llm.py</code>, print tokens/s again, after the streamed text. Hint: in Python the loop variable still exists after a <code>for</code> loop, and it holds the last item.</p>
+<details><summary>Solution</summary>
+<pre><code>for chunk in response:
+    print(chunk.message.content, end="", flush=True)
+
+seconds = chunk.eval_duration / 1e9
+print(f"\n{chunk.eval_count} tokens, {chunk.eval_count / seconds:.1f} tokens/s")</code></pre>
+</details>
+
+<h2>The idea</h2>
+<p>A model does not write a sentence. It writes one token, then the next, then the next. At each step it gives a probability to every possible token, and one is picked <i>at random</i>, following those probabilities. This is called <a href="../reference/glossary.html">sampling</a> (<a href="https://huggingface.co/blog/how-to-generate">Hugging Face: How to generate text</a>). That is why you got answers that were "more or less" the same in lesson 1: similar, but not equal.</p>
+<p>Two options control the dice:</p>
+<table>
+<tr><td><code>temperature</code></td><td>How random the pick is. Ollama's default is 0.8. Higher = more surprising tokens. At <code>0</code> the most likely token always wins, so there is no randomness left. (<a href="https://docs.ollama.com/modelfile">Ollama: parameters</a>)</td></tr>
+<tr><td><code>seed</code></td><td>Fixes the random numbers. "Setting this to a specific number will make the model generate the same text for the same prompt." (<a href="https://docs.ollama.com/modelfile">same page</a>)</td></tr>
+</table>
+<p>You pass them in the <code>options</code> field of the request (<a href="https://docs.ollama.com/api/chat">API docs</a>):</p>
+<pre><code>chat(model=..., messages=..., options={"temperature": 0})</code></pre>
+
+<h2><span class="step">Step 1</span> · Predict first (1 min)</h2>
+<p>The prompt will be: <code>Invent a name for a cat. Answer with the name only.</code> You will send it 10 times with default options. Write down a number before you run anything: <b>how many different names will you get?</b> Guessing first, even if wrong, makes the result stay in memory.</p>
+
+<h2><span class="step">Step 2</span> · Write <code>repeat.py</code> (12 min)</h2>
+<p>In <code>exercises/</code>, write it yourself from this spec:</p>
+<ul>
+<li>A function <code>count_answers(prompt, n=10, **options)</code>.</li>
+<li>It calls <code>chat()</code> <code>n</code> times with the same prompt, no streaming, and passes <code>options=options</code>.</li>
+<li>It cleans each answer with <code>.strip()</code> and counts equal answers. <code>collections.Counter</code> is made for this.</li>
+<li>It returns the counter. The main part prints each answer with its count, most common first, and the number of different answers.</li>
+</ul>
+<p>Try for 10 minutes before you open the solution. The struggle is the lesson.</p>
+<details><summary>Solution (open only after trying)</summary>
+<pre><code>from collections import Counter
+from ollama import chat
+
+MODEL = "llama3.2:3b"
+
+
+def count_answers(prompt, n=10, **options):
+    counts = Counter()
+    for _ in range(n):
+        response = chat(
+            model=MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            options=options,
+        )
+        counts[response.message.content.strip()] += 1
+    return counts
+
+
+prompt = "Invent a name for a cat. Answer with the name only."
+counts = count_answers(prompt)
+for answer, times in counts.most_common():
+    print(times, answer)
+print(len(counts), "different answers")</code></pre>
+</details>
+
+<h2><span class="step">Step 3</span> · Measure (8 min)</h2>
+<p>Run your tool with each setting and fill the table (on paper or in a comment in your file). Ten calls take only a few seconds on your GPU.</p>
+<table>
+<tr><th>Call</th><th>Different answers out of 10</th></tr>
+<tr><td><code>count_answers(prompt)</code></td><td class="fill"></td></tr>
+<tr><td><code>count_answers(prompt, temperature=0)</code></td><td class="fill"></td></tr>
+<tr><td><code>count_answers(prompt, temperature=1.5)</code></td><td class="fill"></td></tr>
+<tr><td><code>count_answers(prompt, temperature=1.5, seed=42)</code></td><td class="fill"></td></tr>
+<tr><td><code>count_answers(prompt, temperature=1.5, seed=7)</code></td><td class="fill"></td></tr>
+</table>
+<p>Then two more questions to answer with your tool:</p>
+<ul>
+<li>Is the name at <code>temperature=0</code> also the most common name of the default run? Why would that be?</li>
+<li>Change the prompt to the lesson 1 question (<code>In one sentence: what is a Python venv?</code>). At default temperature, how many of the 10 sentences are exactly equal? Compare with what your eyes told you in lesson 1.</li>
+</ul>
+
+<h2>What this means for your agents</h2>
+<table>
+<tr><th>Job</th><th>Setting</th><th>Why</th></tr>
+<tr><td>Extract fields from an invoice, classify, decide</td><td><code>temperature: 0</code></td><td>Same document must give the same fields, or you cannot measure accuracy or reproduce a bug.</td></tr>
+<tr><td>Write the morning briefing text</td><td>default</td><td>Text for a human; small variations do no harm.</td></tr>
+<tr><td>Run an eval</td><td><code>temperature: 0</code>, or a fixed <code>seed</code></td><td>If the score changes, the cause is your change, not the dice.</td></tr>
+</table>
+<p><b>One warning.</b> <a href="../reference/glossary.html">Repeatable</a> does not mean correct. At temperature 0 a model that reads a total wrong will read it wrong every time, with full confidence. Repeatability only makes the error <i>measurable</i>. Measuring it is the job of evals, two lessons from now.</p>
+
+<h2>Check your memory</h2>
+<p>The last two questions are from lesson 1. Answer from memory, without scrolling up.</p>
+<div id="quiz"></div>
+<script type="application/json" id="quiz-data">[
+{"q":"What does temperature 0 do when the next token is chosen?","options":["It always takes the likeliest token","It always takes a random token","It always takes the shortest token","It always takes the previous token"],"answer":0,"why":"No randomness is left: the most likely token wins at every step (greedy decoding)."},
+{"q":"You set temperature 1.5 and seed 42, then run the same prompt 10 times. What do you get?","options":["The same answer in every run","A new answer in every run","An empty answer in every run","A longer answer in every run"],"answer":0,"why":"The seed fixes the random numbers, so the same 'random' picks are made each time. Another seed gives another answer, also repeated."},
+{"q":"At temperature 0 you get the same answer 10 times. What does that prove?","options":["The model is repeatable, maybe wrong","The model is repeatable, so correct","The model is broken, so useless","The model is offline, so slower"],"answer":0,"why":"Repeatable is not correct. You still need an eval to know if the answer is right."},
+{"q":"With stream=True, where do you find eval_count?","options":["In the last chunk only","In the first chunk only","In every chunk, counting up","In no chunk at all"],"answer":0,"why":"The statistics arrive with the final chunk, where done is True."},
+{"q":"Which request field makes the model stay loaded for longer after a call?","options":["keep_alive, the time in memory","eval_count, the count of tokens","load_duration, the measured loading time","temperature, the randomness of sampling"],"answer":0,"why":"Default is 5 minutes. That is why your second run was faster: load_duration was almost zero."}
+]</script>
+<script src="../assets/quiz.js"></script>
+
+<h2>Read next</h2>
+<p><b>Primary source:</b> <a href="https://huggingface.co/blog/how-to-generate">How to generate text</a> by Patrick von Platen (Hugging Face). Read the sections "Greedy Search" and "Sampling" (10 minutes). The pictures show the probabilities of the next word and what temperature does to them. Skip beam search. Then look at the parameter table in the <a href="https://docs.ollama.com/modelfile">Ollama Modelfile page</a>: you now understand <code>temperature</code> and <code>seed</code>; notice <code>top_k</code> and <code>top_p</code>, which also limit the dice.</p>
+<p><b>Next lesson:</b> the <code>format</code> field. You will force the model to answer with JSON that follows a schema, and extract the fields of a sample invoice.</p>
+
+<div class="ask"><b>Report back, and ask.</b> Next session, tell your teacher (me): your prediction from step 1, the filled table, and your answers to the two questions in step 3. Anything unclear, ask: paste the code and the output. Questions are part of the lesson.</div>
+</body></html>

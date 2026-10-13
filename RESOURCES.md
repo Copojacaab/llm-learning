@@ -13,6 +13,19 @@
 - [Microsoft Learn: WSL advanced settings (.wslconfig)](https://learn.microsoft.com/en-us/windows/wsl/wsl-config)
   Official reference for memory/swap limits in WSL 2. Use for: raising the RAM limit.
 
+- [Ollama docs: Modelfile parameters](https://docs.ollama.com/modelfile)
+  Table of generation parameters with defaults (temperature 0.8, seed, top_k, top_p, num_ctx, num_predict). Use for: what each `options` key does.
+- [Ollama docs: FAQ](https://docs.ollama.com/faq)
+  How long models stay in memory (5 minutes), `keep_alive`, `OLLAMA_KEEP_ALIVE`, `ollama stop`. Use for: load time and memory questions.
+- [Ollama docs: Streaming](https://docs.ollama.com/capabilities/streaming)
+  What streaming is, and that chunks must be accumulated to keep the conversation history. Use for: streaming with chat, thinking, tools.
+- [Hugging Face blog: How to generate text (Patrick von Platen, 2020)](https://huggingface.co/blog/how-to-generate)
+  Clear explanation of greedy decoding, sampling, temperature, top-k, top-p, with pictures. Use for: the mechanism behind `temperature`.
+- [Ollama docs: Structured outputs](https://docs.ollama.com/capabilities/structured-outputs)
+  The `format` field: JSON mode and JSON schema, Pydantic example, tips (temperature 0, schema also in the prompt). Use for: every extraction task.
+- [Pydantic docs: Models](https://docs.pydantic.dev/latest/concepts/models/)
+  `BaseModel`, `model_json_schema()`, `model_validate_json()`, `model_dump_json()`. Use for: defining the fields to extract and checking the output.
+
 ## Wisdom (Communities)
 
 _None yet. Optional: find one when the first real agent exists (candidate: r/LocalLLaMA, check moderation quality first)._

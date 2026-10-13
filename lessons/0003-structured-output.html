@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson 3: Structured output</title>
+<link rel="stylesheet" href="../assets/style.css"></head><body>
+<h1>Structured output: the <code>format</code> field</h1>
+<p class="meta">Lesson 3 · 30 minutes · <a href="../MISSION.md">Mission</a> · <a href="0002-repeatable-output.html">Lesson 2</a> · <a href="../reference/ollama-python-cheatsheet.html">Cheat sheet</a> · <a href="../reference/glossary.html">Glossary</a></p>
+
+<div class="goal"><b>Today's win:</b> you extract the fields of a sample invoice into a Python object with typed fields. Not text that looks like JSON: an object your code can use. You also see the main danger of this technique with your own eyes: a schema can force the model to <i>invent</i> a value.</div>
+
+<h2>Warm-up: one bug in <code>repeat.py</code> (3 min)</h2>
+<p>Your <code>count_answers</code> has this order of lines:</p>
+<pre><code>counts[response.message.content] += 1
+if response.message.content is not None:
+    clean_str: str = (response.message.content).strip()</code></pre>
+<p>The answer is counted <i>before</i> it is cleaned, and <code>clean_str</code> is never used. With cat names you had no problem, because the model added no spaces. Today the answers have many lines, and it will matter. <b>Task:</b> fix it so the cleaned string is the one that is counted.</p>
+
+<h2>The idea</h2>
+<p>A program cannot use a sentence. It needs fields: <code>invoice.total</code>, <code>invoice.invoice_number</code>. You can ask the model "answer in JSON", but that is only a request. The model may add a sentence before the JSON, or choose its own field names.</p>
+<p>The <code>format</code> field is different. It is not a request, it is a limit. In lesson 2 you learned that the model picks one token at a time. With <code>format</code>, at each step Ollama removes the tokens that would break the schema, and the pick is made among the others. The output <i>cannot</i> have another shape. Ollama calls this <a href="../reference/glossary.html">structured output</a>: "Structured outputs let you enforce a JSON schema on model responses so you can reliably extract structured data" (<a href="https://docs.ollama.com/capabilities/structured-outputs">Ollama: structured outputs</a>).</p>
+<p>You do not write the <a href="../reference/glossary.html">JSON schema</a> by hand. You write a <a href="https://docs.pydantic.dev/latest/concepts/models/">Pydantic</a> class (already installed: the <code>ollama</code> library uses it), and Pydantic gives you both directions:</p>
+<pre><code>from pydantic import BaseModel
+
+class Invoice(BaseModel):
+    invoice_number: str
+    total: float
+
+response = chat(model=..., messages=..., format=Invoice.model_json_schema())
+invoice = Invoice.model_validate_json(response.message.content)
+invoice.total        # a float, not a string</code></pre>
+<table>
+<tr><td><code>Invoice.model_json_schema()</code></td><td>Class → schema. This is what you send to the model.</td></tr>
+<tr><td><code>Invoice.model_validate_json(text)</code></td><td>Text → object. It checks every field and type, and raises <code>ValidationError</code> if something is wrong.</td></tr>
+</table>
+
+<h2><span class="step">Step 1</span> · Predict, then see the problem (5 min)</h2>
+<p>The document is <code>exercises/samples/invoice_001.txt</code>: an invented Italian invoice (no real data). Open it and read it.</p>
+<p>In a new file <code>extract.py</code>, read the file and send this prompt <b>without</b> <code>format</code>, 5 times, default options:</p>
+<pre><code>Extract the invoice number, the invoice date, the supplier name and the total from this invoice. Answer in JSON.
+
+&lt;the text of the invoice&gt;</code></pre>
+<p>For each answer, try <code>json.loads(response.message.content)</code> inside a <code>try</code> / <code>except</code>. <b>Before you run it, write down a number:</b> in how many of the 5 answers will <code>json.loads</code> work? Then print the answers and look at them: are the field names the same in every run?</p>
+
+<h2><span class="step">Step 2</span> · Write the extractor (10 min)</h2>
+<p>In the same file, from this spec:</p>
+<ul>
+<li>A class <code>Invoice(BaseModel)</code> with <code>invoice_number: str</code>, <code>invoice_date: str</code>, <code>supplier_name: str</code>, <code>supplier_vat: str</code>, <code>total: float</code>.</li>
+<li>A function <code>extract(text, **options)</code> that returns an <code>Invoice</code>. The prompt is now short: <code>Extract the fields from this invoice.</code> plus the text. The field names are in the schema, so you do not repeat them.</li>
+<li>It passes <code>format=Invoice.model_json_schema()</code> and <code>options=options</code>, and returns <code>Invoice.model_validate_json(...)</code>.</li>
+<li>The main part calls <code>extract(text, temperature=0)</code> and prints the object, then <code>invoice.total * 2</code> to prove the total is a number.</li>
+</ul>
+<p>Try for 10 minutes before you open the solution.</p>
+<details><summary>Solution (open only after trying)</summary>
+<pre><code>from ollama import chat
+from pydantic import BaseModel
+
+MODEL = "llama3.2:3b"
+
+
+class Invoice(BaseModel):
+    invoice_number: str
+    invoice_date: str
+    supplier_name: str
+    supplier_vat: str
+    total: float
+
+
+def extract(text, **options):
+    response = chat(
+        model=MODEL,
+        messages=[
+            {"role": "user", "content": "Extract the fields from this invoice.\n\n" + text}
+        ],
+        format=Invoice.model_json_schema(),
+        options=options,
+    )
+    return Invoice.model_validate_json(response.message.content)
+
+
+with open("samples/invoice_001.txt") as f:
+    text = f.read()
+
+invoice = extract(text, temperature=0)
+print(invoice)
+print(invoice.total * 2)</code></pre>
+</details>
+
+<h2><span class="step">Step 3</span> · Measure (10 min)</h2>
+<p>First, check the result by hand against the document. In the invoice the total is written <code>1.288,32</code>, the Italian way. What did the model put in <code>total</code>?</p>
+<p>Then use a <code>Counter</code>, as in lesson 2, to fill the table. Call <code>extract</code> 10 times and count <code>invoice.model_dump_json()</code> (the object written back as one clean line of JSON).</p>
+<table>
+<tr><th>Setting</th><th>Different results out of 10</th></tr>
+<tr><td><code>extract(text)</code> (default temperature)</td><td class="fill"></td></tr>
+<tr><td><code>extract(text, temperature=0)</code></td><td class="fill"></td></tr>
+</table>
+<p>Now the trap. This invoice has <b>no</b> order number. Add one line to the class and run again at <code>temperature=0</code>:</p>
+<table>
+<tr><th>New field</th><th>Value the model gives</th></tr>
+<tr><td><code>order_number: str</code></td><td class="fill"></td></tr>
+<tr><td><code>order_number: str | None</code></td><td class="fill"></td></tr>
+</table>
+<p>Two questions:</p>
+<ul>
+<li>With <code>order_number: str</code>, where does the value come from? Find it in the document. Did <code>model_validate_json</code> complain?</li>
+<li>With <code>str | None</code> at <b>default</b> temperature, 10 runs: how many times is it <code>None</code>?</li>
+</ul>
+
+<h2>What this means for your agents</h2>
+<table>
+<tr><th>Rule</th><th>Why</th></tr>
+<tr><td>Every field that can be absent is <code>... | None</code></td><td>A required field must be filled. If the document does not have the value, the model takes something that looks similar. The schema gives the model no way to say "not found" unless you add one.</td></tr>
+<tr><td><code>format</code> plus <code>temperature: 0</code></td><td>Ollama's own tip: "Lower the temperature (e.g., set it to <code>0</code>) for more deterministic completions." Same document, same fields.</td></tr>
+<tr><td>Always <code>model_validate_json</code>, never <code>json.loads</code> alone</td><td>You get types checked, and one clear exception to catch when the output is cut or wrong.</td></tr>
+</table>
+<p><b>One warning.</b> The schema controls the <i>shape</i>, not the <i>truth</i>. <code>"order_number": "conf. 100"</code> is perfectly valid JSON, it passes validation, and it is false. Valid is not correct, in the same way that repeatable is not correct. Only a comparison with values you checked yourself can find this error. That comparison is an eval, and it is the next lesson.</p>
+
+<h2>Check your memory</h2>
+<p>The last two questions are from lessons 1 and 2. Answer from memory, without scrolling up.</p>
+<div id="quiz"></div>
+<script type="application/json" id="quiz-data">[
+{"q":"How does the format field make the output follow the schema?","options":["It removes the tokens that break it","It repeats the call until it fits","It repairs the text after the call","It asks the model in the prompt"],"answer":0,"why":"The limit is applied during sampling, token by token. The model cannot write another shape."},
+{"q":"The schema has a required field, but the document does not have that value. What happens?","options":["The model fills it with some value","The model leaves the field out","The call fails with an exception","The field is filled with null"],"answer":0,"why":"Required means it must be written. The model takes something that looks similar. Use `| None` for fields that can be absent."},
+{"q":"The output passes model_validate_json. What do you know?","options":["The shape and types are right","The values are all right","The document was fully read","The model was fully sure"],"answer":0,"why":"Valid is not correct. Validation checks shape and types, not the truth of the values."},
+{"q":"Which setting do you use to extract fields from a document?","options":["Temperature 0, same fields each run","Temperature 0.8, the default value","Temperature 1.5, with a fixed seed","Temperature 1.5, with no seed"],"answer":0,"why":"The same document must give the same fields, or you cannot measure accuracy."},
+{"q":"Ten runs at temperature 1.5 with seed 7 gave you the same name as temperature 0. Why is that possible?","options":["A random pick can hit the likeliest","A seed always turns sampling off","A seed always sets temperature to 0","A random pick can skip the prompt"],"answer":0,"why":"The seed fixes the dice, it does not remove them. The likeliest name is also the one a random pick lands on most often. Seed 42 gave another name."}
+]</script>
+<script src="../assets/quiz.js"></script>
+
+<h2>Read next</h2>
+<p><b>Primary source:</b> <a href="https://docs.ollama.com/capabilities/structured-outputs">Ollama: structured outputs</a> (5 minutes, it is short). Notice two things: <code>format="json"</code> exists too (valid JSON, but no schema, so the field names are free again), and the note "It is ideal to also pass the JSON schema as a string in the prompt to ground the model's response." Then the first part of <a href="https://docs.pydantic.dev/latest/concepts/models/">Pydantic: models</a>, up to "Model methods and properties".</p>
+<p><b>Next lesson:</b> your first eval. A few sample invoices, the true values written by you, and a score. Then you change one thing (the prompt, or the schema) and see if the score goes up or down.</p>
+
+<div class="ask"><b>Report back, and ask.</b> Next session, tell your teacher (me): your prediction from step 1 and the real number, the two filled tables, and your answers to the two questions in step 3. Anything unclear, ask: paste the code and the output. Questions are part of the lesson.</div>
+</body></html>

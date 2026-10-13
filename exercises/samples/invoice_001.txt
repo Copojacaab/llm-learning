@@ -1,0 +1,22 @@
+FERRAMENTA ROSSI S.R.L.
+Via Garibaldi 12 - 20900 Monza (MB)
+P.IVA IT01234567890
+
+FATTURA N. 2026/0417                     Data: 03/09/2026
+
+Cliente:
+Officine Bianchi S.p.A.
+Via Torino 88 - 10121 Torino (TO)
+P.IVA IT09876543210
+
+Descrizione                     Q.ta    Prezzo     Importo
+Viti inox M6x30 (conf. 100)      12       8,50      102,00
+Trapano a colonna TC-16           1     890,00      890,00
+Guanti da lavoro tg. 9           20       3,20       64,00
+
+                              Imponibile          1.056,00
+                              IVA 22%               232,32
+                              TOTALE EUR          1.288,32
+
+Pagamento: bonifico bancario 30 gg d.f.
+Scadenza: 03/10/2026
