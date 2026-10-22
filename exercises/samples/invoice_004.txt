@@ -1,0 +1,26 @@
+FATTURA ELETTRONICA - copia di cortesia
+
+Cessionario/committente
+  Denominazione: Trasporti Veloce S.p.A.
+  Identificativo fiscale: IT05555666677
+  Sede: Via Emilia 300 - 41121 Modena (MO)
+
+Cedente/prestatore
+  Denominazione: Ricambi Adriatica S.r.l.
+  Identificativo fiscale: IT07778889990
+  Sede: Viale Europa 15 - 47921 Rimini (RN)
+
+Dati generali
+  Tipo documento: TD01 fattura
+  Numero: FE-2026-00912
+  Data: 2026-09-28
+  Rif. ordine acquisto: 4500012345
+
+Linee
+  1  Kit frizione completo cod. 882-A     qta 4    prezzo 1.750,00   totale  7.000,00
+  2  Pastiglie freno asse ant. cod. 100   qta 30   prezzo   116,66   totale  3.499,80
+
+Riepilogo
+  Imponibile:               10.499,80
+  Imposta (22%):             2.309,96
+  Importo totale documento: 12.809,76
