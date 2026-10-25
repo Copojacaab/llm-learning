@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Evals reference</title>
+<link rel="stylesheet" href="../assets/style.css"></head><body>
+<h1>Evals</h1>
+<p class="meta">Quick reference · <a href="glossary.html">Glossary</a> · <a href="ollama-python-cheatsheet.html">Cheat sheet</a> · First used in <a href="../lessons/0004-first-eval.html">Lesson 4</a></p>
+
+<h2>The three parts</h2>
+<table>
+<tr><td><b>Cases</b></td><td>fixed inputs (documents, questions)</td></tr>
+<tr><td><b>Ground truth</b></td><td>correct output per case, checked by a human</td></tr>
+<tr><td><b>Score</b></td><td>function output vs truth → a number (e.g. correct fields / total fields)</td></tr>
+</table>
+
+<h2>Field-level eval for extraction</h2>
+<pre><code>expected = json.loads(Path("samples/expected.json").read_text())
+right = {f: 0 for f in Invoice.model_fields}
+for name, want in expected.items():
+    inv = extract((SAMPLES / name).read_text(), temperature=0)
+    got = inv.model_dump() if inv else {}
+    for f in right:
+        if same(got.get(f), want[f]): right[f] += 1
+        else: print(name, f, got.get(f), want[f])   # always look at failures
+print(f"score {sum(right.values())}/{len(expected) * len(right)}")</code></pre>
+<p><code>same()</code>: strings with <code>.strip().casefold()</code>, floats with <code>round(x, 2)</code>, else <code>==</code>.</p>
+
+<h2>Rules</h2>
+<table>
+<tr><td>Temperature 0</td><td>repeatable output → one run per case is enough</td></tr>
+<tr><td>Several cases</td><td>a fix on one case can break another; tuning on one case = overfitting</td></tr>
+<tr><td>Human truth</td><td>never let the model write the expected values</td></tr>
+<tr><td>One change at a time</td><td>score after each change, keep a table</td></tr>
+<tr><td>Print failures</td><td>the score says how much, the failures say what to fix</td></tr>
+</table>
+
+<h2>Levels (Hamel Husain)</h2>
+<p>1 · unit tests: assertions written by hand (this page) · 2 · human and model review of traces, for free text · 3 · A/B tests with real users. Source: <a href="https://hamel.dev/blog/posts/evals/">Your AI Product Needs Evals</a>.</p>
+</body></html>

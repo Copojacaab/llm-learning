@@ -1,0 +1,21 @@
+TESSITURA LOMBARDA S.p.A.
+Viale Lombardia 230 - 21052 Busto Arsizio (VA)
+Partita IVA: IT02233445566
+
+Fattura n. FT-2026-1193
+Data fattura: 25-09-2026
+
+Destinatario:
+Confezioni Moretti S.n.c.
+Via Roma 3 - 50047 Prato (PO)
+P.IVA IT06677889900
+
+Codice   Descrizione                     Metri   Prezzo/m    Importo
+TL-201   Tessuto cotone blu              300       9,40     2.820,00
+TL-305   Tessuto lino naturale            80      14,50     1.160,00
+
+Imponibile                                                  3.980,00
+IVA 22%                                                       875,60
+TOTALE DA PAGARE                                        EUR 4.855,60
+
+Vostro ordine: 778/B

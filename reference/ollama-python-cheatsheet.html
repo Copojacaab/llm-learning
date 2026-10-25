@@ -58,6 +58,11 @@ Client(host="http://localhost:11434").chat(...)</code></pre>
 <p>Extraction, classification, evals: <code>temperature: 0</code>. Text for humans (briefing): default is fine. Source: <a href="https://docs.ollama.com/modelfile">Modelfile parameters</a>.</p>
 <h2>Structured output</h2>
 <p><code>format</code> limits the tokens the model can pick, so the output always has the shape of the schema. It checks shape, not truth: a required field is always filled, also when the document does not have the value. Fields that can be absent: <code>... | None</code>. <code>format="json"</code> gives valid JSON with free field names. Source: <a href="https://docs.ollama.com/capabilities/structured-outputs">structured outputs</a>.</p>
+<h2>Passing options through functions</h2>
+<pre><code>def extract(text, **options):          # collects: {"temperature": 0}
+    chat(..., options=options)         # OK: chat() wants a dict
+    helper(text, **options)            # OK: unpacks again
+    helper(text, options=options)      # BUG: wraps it -> {"options": {...}}, ignored by Ollama</code></pre>
 <h2>Model in memory</h2>
 <p>First call loads the model (<code>load_duration</code>). It stays loaded 5 minutes (<a href="https://docs.ollama.com/faq">FAQ</a>). <code>keep_alive="30m"</code> in <code>chat()</code> keeps it longer; <code>0</code> unloads now; <code>ollama stop llama3.2:3b</code> unloads from the shell.</p>
 <h2>Request fields for later lessons</h2>

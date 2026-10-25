@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson 4: Your first eval</title>
+<link rel="stylesheet" href="../assets/style.css"></head><body>
+<h1>Your first eval</h1>
+<p class="meta">Lesson 4 · 30 minutes · <a href="../MISSION.md">Mission</a> · <a href="0003-structured-output.html">Lesson 3</a> · <a href="../reference/evals.html">Evals reference</a> · <a href="../reference/ollama-python-cheatsheet.html">Cheat sheet</a> · <a href="../reference/glossary.html">Glossary</a></p>
+
+<div class="goal"><b>Today's win:</b> one number that says how good your invoice extractor is. You write the true values of 4 invoices yourself, a script compares them with the model's output, and you get a score like <code>13/24</code>. Then you change one thing and see if the number goes up. From today, "it seems to work" becomes "it gets 20 of 24 fields right".</div>
+
+<h2>Warm-up: your temperature never arrived (5 min)</h2>
+<p>Your <code>temperature=0</code> run gave 5 different results out of 10. In lesson 2, temperature 0 gave 1 out of 10. The reason is in how the arguments travel:</p>
+<pre><code>def extract(text, **options):        # extract(text, temperature=0)
+    ...                              # options == {"temperature": 0}
+    _ollama_call(role="user", content=text, options=options)
+
+def _ollama_call(role, content, **options):
+    ...                              # options == {"options": {"temperature": 0}}
+    ollama.chat(..., options=options)</code></pre>
+<p><code>**options</code> in a <b>definition</b> collects all keyword arguments into a dict. <code>options=options</code> in a <b>call</b> sends <i>one</i> keyword argument, named <code>options</code>. So the dict is wrapped one more time at each step. Ollama receives a key called <code>"options"</code>, does not know it, and ignores it: all your runs were at the default temperature 0.8. (<code>repeat</code> has the same problem.) To <i>unpack</i> a dict into keyword arguments again, the call needs <code>**options</code> (<a href="https://docs.python.org/3/tutorial/controlflow.html#keyword-arguments">Python tutorial: keyword arguments</a>).</p>
+<p><b>Task:</b> fix the two calls, and make <code>count</code> use its parameter <code>invoice_list</code> (today it reads the global <code>invoices_list</code>). Then run your 10 repetitions again at <code>temperature=0</code>. How many different results now?</p>
+
+<div class="ask"><b>About your seed idea.</b> "Find a seed that gives the right order number, and keep it." It feels logical, but it does not work, for two reasons. (1) At temperature 0 there is no random pick, so the seed does nothing. (2) At higher temperature, a seed that gives the right value on <i>this</i> invoice says nothing about the <i>next</i> invoice: the text is different, so the random numbers fall on different tokens. You would be tuning your system on one example. This is called <a href="../reference/glossary.html">overfitting</a>. The only way to know if a change helps is to measure it on <i>several</i> documents. That is today's lesson.</div>
+
+<h2>The idea</h2>
+<p>An <a href="../reference/glossary.html">eval</a> has three parts:</p>
+<table>
+<tr><td><b>Cases</b></td><td>Fixed inputs. Today: 4 invoices in <code>exercises/samples/</code>.</td></tr>
+<tr><td><b>Ground truth</b></td><td>The correct output for each case, checked <i>by a human</i>. Today: you.</td></tr>
+<tr><td><b>Score</b></td><td>A function that compares output and truth and gives a number. Today: correct fields out of total fields.</td></tr>
+</table>
+<p>Hamel Husain, who builds LLM products for companies, puts it simply: "Unit tests for LLMs are assertions (like you would write in pytest)", and they "should run fast and cheaply as you develop your application" (<a href="https://hamel.dev/blog/posts/evals/">Your AI Product Needs Evals</a>). You already know this from testing your own code. The difference: the code under test is a model, and you never expect 100%. You expect a number, and you watch it move.</p>
+<p>The second rule from the same article: "You can never stop looking at data". A score alone hides <i>which</i> fields fail. Your script will print every wrong field, with what the model gave and what you expected.</p>
+
+<h2><span class="step">Step 1</span> · Write the ground truth (7 min)</h2>
+<p>There are three new invented invoices: <code>invoice_002.txt</code>, <code>invoice_003.txt</code>, <code>invoice_004.txt</code>. Read all four. Some are built to be hard: the supplier is not always at the top, and not every number near the word "ordine" is an order number.</p>
+<p>Create <code>exercises/samples/expected.json</code>: one entry per file, with the 6 fields of your <code>Invoice</code> class. Rules, so the comparison is fair:</p>
+<ul>
+<li><code>invoice_date</code> always as <code>YYYY-MM-DD</code> (your program will need one format, whatever the document says).</li>
+<li><code>supplier_vat</code> as written, without spaces: <code>IT01234567890</code>.</li>
+<li><code>total</code> as a number: <code>1288.32</code>.</li>
+<li><code>order_number</code>: <code>null</code> if the document has no order number.</li>
+</ul>
+<pre><code>{
+  "invoice_001.txt": {"invoice_number": "2026/0417", "invoice_date": "2026-09-03", ...},
+  "invoice_002.txt": { ... }
+}</code></pre>
+<p><b>Before step 2, write down a number:</b> with your lesson 3 extractor at temperature 0, how many of the 24 fields will be right?</p>
+
+<h2><span class="step">Step 2</span> · Write the eval (10 min)</h2>
+<p>In a new file <code>eval.py</code>, from this spec:</p>
+<ul>
+<li>Import <code>Invoice</code> and <code>extract</code> from <code>extract_data</code>. Load <code>expected.json</code>.</li>
+<li>A function <code>same(got, want)</code>: for two strings, compare after <code>.strip().casefold()</code> (so <code>S.R.L.</code> equals <code>S.r.l.</code>); for a float, compare <code>round(..., 2)</code>; otherwise <code>==</code> (this covers <code>None</code>).</li>
+<li>For each file: <code>extract(text, temperature=0)</code>, then <code>invoice.model_dump()</code> gives a dict. Compare each field. If <code>extract</code> returned <code>None</code>, all 6 fields are wrong.</li>
+<li>Print each wrong field: file, field, got, want. At the end print the right answers per field and the total, like <code>score 13/24</code>.</li>
+</ul>
+<p>Why only one run per file? At temperature 0 the output is repeatable (you just checked it in the warm-up), so one run is enough.</p>
+<p>Try for 10 minutes before you open the solution.</p>
+<details><summary>Solution (open only after trying)</summary>
+<pre><code>import json
+from pathlib import Path
+
+from extract_data import Invoice, extract
+
+SAMPLES = Path("samples")
+
+
+def same(got, want):
+    if isinstance(got, str) and isinstance(want, str):
+        return got.strip().casefold() == want.strip().casefold()
+    if isinstance(want, float):
+        return got is not None and round(got, 2) == round(want, 2)
+    return got == want
+
+
+expected = json.loads((SAMPLES / "expected.json").read_text())
+right = {field: 0 for field in Invoice.model_fields}
+
+for name, want in expected.items():
+    invoice = extract((SAMPLES / name).read_text(), temperature=0)
+    got = invoice.model_dump() if invoice is not None else {}
+    for field in right:
+        if same(got.get(field), want[field]):
+            right[field] += 1
+        else:
+            print(f"{name} {field}: got {got.get(field)!r}, want {want[field]!r}")
+
+print(right)
+print(f"score {sum(right.values())}/{len(expected) * len(right)}")</code></pre>
+<p>Note: <code>extract</code> must send an instruction before the text. Today your <code>extract</code> sends only the invoice (the instruction is in a comment). Put back <code>"Extract the fields from this invoice.\n\n" + text</code>.</p>
+</details>
+
+<h2><span class="step">Step 3</span> · Change one thing, measure again (8 min)</h2>
+<p>Look at the wrong fields. Probably supplier and customer are mixed up, and dates keep the document's format. Try two changes, <b>one at a time</b>, and run <code>eval.py</code> after each.</p>
+<p><b>Change A: descriptions in the schema.</b> Pydantic lets you attach a description to a field, and it goes into the JSON schema:</p>
+<pre><code>from pydantic import Field
+
+    invoice_date: str = Field(description="Date of the invoice, format YYYY-MM-DD")
+    supplier_name: str = Field(description="The company that issues the invoice and gets paid. Not the customer.")</code></pre>
+<p>Write descriptions for <code>invoice_date</code>, <code>supplier_name</code>, <code>supplier_vat</code> and <code>order_number</code> (say when it must be <code>null</code>). Predict the score, then run.</p>
+<p><b>Change B: the schema in the prompt too.</b> Keep the descriptions. Change the prompt to <code>"Extract the fields from this invoice. Follow this JSON schema:\n"</code> + <code>json.dumps(Invoice.model_json_schema())</code> + the text. This is the tip from <a href="https://docs.ollama.com/capabilities/structured-outputs">Ollama: structured outputs</a>: "It is ideal to also pass the JSON schema as a string in the prompt to ground the model's response."</p>
+<table>
+<tr><th>Version</th><th>Your prediction</th><th>Score /24</th></tr>
+<tr><td>Lesson 3 extractor</td><td class="fill"></td><td class="fill"></td></tr>
+<tr><td>A: descriptions in <code>Field</code></td><td class="fill"></td><td class="fill"></td></tr>
+<tr><td>B: A + schema in the prompt</td><td class="fill"></td><td class="fill"></td></tr>
+</table>
+<p>One question: if change A did nothing, why? Think about what <code>format</code> does with the schema (lesson 3), and what the model actually <i>reads</i>.</p>
+
+<h2>What this means for your agents</h2>
+<table>
+<tr><th>Rule</th><th>Why</th></tr>
+<tr><td>Measure on several cases, never on one</td><td>A change that fixes one document can break another. Only the score on the whole set tells you.</td></tr>
+<tr><td>The ground truth is written by a human</td><td>If the model writes it, you measure the model against itself.</td></tr>
+<tr><td>One change at a time, score after each</td><td>With two changes at once you do not know which one helped.</td></tr>
+<tr><td>Print the failures, not only the score</td><td>The failures tell you what to change next.</td></tr>
+</table>
+<p>This set is tiny: 4 invoices. A real eval for the invoice pipeline of your <a href="../MISSION.md">mission</a> needs dozens of verified documents. But the script does not change: you only add lines to <code>expected.json</code>. Every time you change the model, the prompt or the schema, you run it again.</p>
+
+<h2>Check your memory</h2>
+<p>The last two questions are from lessons 2 and 3. Answer from memory, without scrolling up.</p>
+<div id="quiz"></div>
+<script type="application/json" id="quiz-data">[
+{"q":"A function is defined as f(**options) and called as g(options=options). What does g receive?","options":["One keyword argument named options","All the keys as separate arguments","Nothing, because Python drops it","An error at the moment of the call"],"answer":0,"why":"options=options passes the whole dict as a single argument. To unpack it, call g(**options)."},
+{"q":"You find a seed that gives the right order number on one invoice. What does it tell you about other invoices?","options":["Nothing, the next text is different","The seed works on every invoice","It works on invoices of that supplier","It works if the temperature is high"],"answer":0,"why":"The seed fixes the random numbers, not the result. With another text they fall on other tokens. Tuning on one example is overfitting."},
+{"q":"Who should write the ground truth of an eval?","options":["A human who checked each value","The same model, at temperature 0","A bigger model, at temperature 0","The model, using its best seed"],"answer":0,"why":"Ground truth is what you compare against. If a model writes it, its errors become the truth."},
+{"q":"Why can one run per document be enough in your eval?","options":["Temperature 0 gives the same output","The model is sure of its answers","The schema makes the values correct","One run uses less GPU memory"],"answer":0,"why":"At temperature 0 the output is repeatable, so a second run gives the same fields."},
+{"q":"An invoice has no order number, and order_number is a required str. What will the model write?","options":["Some text that looks like one","The value null, in every run","Nothing, the field is skipped","An error, the call will fail"],"answer":0,"why":"A required field must be filled. Use str | None and tell the model when to use null."}
+]</script>
+<script src="../assets/quiz.js"></script>
+
+<h2>Read next</h2>
+<p><b>Primary source:</b> Hamel Husain, <a href="https://hamel.dev/blog/posts/evals/">Your AI Product Needs Evals</a> (2024). Read the introduction and the part on "Level 1: Unit Tests" (about 15 minutes). Notice that he starts from assertions you write by hand, exactly what you did today. The later levels (human review, a model as judge) come when the outputs are free text, like the morning briefing.</p>
+<p><b>Next lesson:</b> tools. The model asks your Python code to run a function, and you send back the result. The first step toward the secretary agent.</p>
+
+<div class="ask"><b>Report back, and ask.</b> Next session, tell your teacher (me):
+<ol>
+<li>Warm-up: how many different results at temperature 0 after the fix?</li>
+<li>Your prediction from step 1.</li>
+<li>The filled table of step 3.</li>
+<li>Your answer to the question "if change A did nothing, why?"</li>
+<li>Which fields are still wrong after change B, and one idea to fix them.</li>
+</ol>
+Anything unclear, ask: paste the code and the output. Questions are part of the lesson.</div>
+</body></html>

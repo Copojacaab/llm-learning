@@ -25,6 +25,10 @@
   The `format` field: JSON mode and JSON schema, Pydantic example, tips (temperature 0, schema also in the prompt). Use for: every extraction task.
 - [Pydantic docs: Models](https://docs.pydantic.dev/latest/concepts/models/)
   `BaseModel`, `model_json_schema()`, `model_validate_json()`, `model_dump_json()`. Use for: defining the fields to extract and checking the output.
+- [Hamel Husain: Your AI Product Needs Evals (2024)](https://hamel.dev/blog/posts/evals/)
+  Practitioner guide: three levels (unit tests/assertions, human and model review of traces, A/B tests), "look at your data". Use for: designing every eval, from the invoice extractor to the briefing.
+- [Python tutorial: keyword arguments](https://docs.python.org/3/tutorial/controlflow.html#keyword-arguments)
+  `*args` / `**kwargs` in definitions and calls. Use for: passing `options` through helper functions.
 
 ## Wisdom (Communities)
 
@@ -32,6 +36,5 @@ _None yet. Optional: find one when the first real agent exists (candidate: r/Loc
 
 ## Gaps
 
-- A high-trust source on evals for LLM apps (needed before the first agent).
 - A high-trust source on tool use / agent loops with small local models.
 - A source on PDF extraction for invoices.

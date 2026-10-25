@@ -3,7 +3,7 @@
 <title>Glossary</title>
 <link rel="stylesheet" href="../assets/style.css"></head><body>
 <h1>Glossary</h1>
-<p class="meta">One meaning per word, used the same way in every lesson · <a href="ollama-python-cheatsheet.html">Cheat sheet</a></p>
+<p class="meta">One meaning per word, used the same way in every lesson · <a href="ollama-python-cheatsheet.html">Cheat sheet</a> · <a href="evals.html">Evals</a></p>
 <dl>
 <dt>Token</dt>
 <dd>The unit a model reads and writes: a word or a piece of a word. Speed is measured in tokens per second.</dd>
@@ -30,6 +30,14 @@
 <dt>Load / keep-alive</dt>
 <dd>Loading copies the model into GPU memory before the first answer. Keep-alive is how long it stays there after a call (default 5 minutes).</dd>
 <dt>Eval</dt>
-<dd>A repeatable test that measures the quality of a model's output on fixed inputs. (Not the same thing as the field <code>eval_count</code>, where "eval" only means "tokens the model computed".)</dd>
+<dd>A repeatable test that measures the quality of a model's output on fixed inputs: cases + ground truth + score. <a href="evals.html">Evals reference</a>. (Not the same thing as the field <code>eval_count</code>, where "eval" only means "tokens the model computed".)</dd>
+<dt>Ground truth</dt>
+<dd>The correct output for an eval case, checked by a human. The model's output is compared against it. First used in <a href="../lessons/0004-first-eval.html">Lesson 4</a>.</dd>
+<dt>Eval case</dt>
+<dd>One fixed input of an eval, with its ground truth. Example: one invoice file plus its 6 true field values.</dd>
+<dt>Score</dt>
+<dd>The number an eval produces, e.g. correct fields out of total fields (<code>18/24</code>). Compare scores only on the same set of cases.</dd>
+<dt>Overfitting</dt>
+<dd>Tuning a system (prompt, seed, schema) until it works on the few examples you tried, so it looks better than it is on new inputs. An eval on many cases shows it.</dd>
 </dl>
 </body></html>

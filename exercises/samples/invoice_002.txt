@@ -1,0 +1,20 @@
+Spett.le
+STUDIO TECNICO VERDI
+Corso Vittorio Emanuele 45 - 40121 Bologna (BO)
+P.IVA IT05544332211
+
+FATTURA ELETTRONICA            Numero: 88/E          del 12/09/2026
+Rif. Vs. ordine n. ORD-5531 del 20/08/2026
+
+Descrizione                          Q.ta    Prezzo      Importo
+Licenza software CAD (annuale)          2    450,00       900,00
+Assistenza tecnica remota (ore)         6     55,00       330,00
+
+                                   Imponibile           1.230,00
+                                   IVA 22%                270,60
+                                   Totale documento     1.500,60
+
+Emessa da:
+DATALOGIC SERVIZI S.R.L.
+Via dell'Industria 7 - 41012 Carpi (MO)
+P.IVA IT07788990011
