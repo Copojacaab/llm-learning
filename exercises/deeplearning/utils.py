@@ -1,19 +1,20 @@
 # === Standard Library ===
+import base64
+import json
+import mimetypes
 import os
 import re
-import json
-import base64
-import mimetypes
+from html import escape
 from pathlib import Path
+
+import matplotlib.pyplot as plt
 
 # === Third-Party ===
 import pandas as pd
-import matplotlib.pyplot as plt
-from PIL import Image  # (kept if you need it elsewhere)
+from anthropic import Anthropic
 from dotenv import load_dotenv
 from openai import OpenAI
-from anthropic import Anthropic
-from html import escape
+from PIL import Image  # (kept if you need it elsewhere)
 
 # === Env & Clients ===
 load_dotenv()
@@ -44,7 +45,8 @@ def get_response(model: str, prompt: str) -> str:
             messages=[{"role": "user", "content": prompt}],
         )
         return response.choices[0].message.content
-    
+
+
 # === Data Loading ===
 def load_and_prepare_data(csv_path: str) -> pd.DataFrame:
     """Load CSV and derive date parts commonly used in charts."""
@@ -57,10 +59,12 @@ def load_and_prepare_data(csv_path: str) -> pd.DataFrame:
         df["year"] = df["date"].dt.year
     return df
 
+
 # === Helpers ===
 def make_schema_text(df: pd.DataFrame) -> str:
     """Return a human-readable schema from a DataFrame."""
     return "\n".join(f"- {c}: {dt}" for c, dt in df.dtypes.items())
+
 
 def ensure_execute_python_tags(text: str) -> str:
     """Normalize code to be wrapped in <execute_python>...</execute_python>."""
@@ -70,6 +74,7 @@ def ensure_execute_python_tags(text: str) -> str:
     if "<execute_python>" not in text:
         text = f"<execute_python>\n{text}\n</execute_python>"
     return text
+
 
 def encode_image_b64(path: str) -> tuple[str, str]:
     """Return (media_type, base64_str) for an image file path."""
@@ -84,6 +89,7 @@ import base64
 from IPython.display import HTML, display
 import pandas as pd
 from typing import Any
+
 
 def print_html(content: Any, title: str | None = None, is_image: bool = False):
     """
@@ -106,9 +112,13 @@ def print_html(content: Any, title: str | None = None, is_image: bool = False):
         b64 = image_to_base64(content)
         rendered = f'<img src="data:image/png;base64,{b64}" alt="Image" style="max-width:100%; height:auto; border-radius:8px;">'
     elif isinstance(content, pd.DataFrame):
-        rendered = content.to_html(classes="pretty-table", index=False, border=0, escape=False)
+        rendered = content.to_html(
+            classes="pretty-table", index=False, border=0, escape=False
+        )
     elif isinstance(content, pd.Series):
-        rendered = content.to_frame().to_html(classes="pretty-table", border=0, escape=False)
+        rendered = content.to_frame().to_html(
+            classes="pretty-table", border=0, escape=False
+        )
     elif isinstance(content, str):
         rendered = f"<pre><code>{_escape(content)}</code></pre>"
     else:
@@ -166,10 +176,10 @@ def print_html(content: Any, title: str | None = None, is_image: bool = False):
     card = f'<div class="pretty-card">{title_html}{rendered}</div>'
     display(HTML(css + card))
 
-    
 
-    
-def image_anthropic_call(model_name: str, prompt: str, media_type: str, b64: str) -> str:
+def image_anthropic_call(
+    model_name: str, prompt: str, media_type: str, b64: str
+) -> str:
     """
     Call Anthropic Claude (messages.create) with text+image and return *all* text blocks concatenated.
     Adds a system message to enforce strict JSON output.
@@ -182,18 +192,27 @@ def image_anthropic_call(model_name: str, prompt: str, media_type: str, b64: str
             "You are a careful assistant. Respond with a single valid JSON object only. "
             "Do not include markdown, code fences, or commentary outside JSON."
         ),
-        messages=[{
-            "role": "user",
-            "content": [
-                {"type": "text", "text": prompt},
-                {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": b64}},
-            ],
-        }],
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": media_type,
+                            "data": b64,
+                        },
+                    },
+                ],
+            }
+        ],
     )
 
     # Anthropic returns a list of content blocks; collect all text
     parts = []
-    for block in (msg.content or []):
+    for block in msg.content or []:
         if getattr(block, "type", None) == "text":
             parts.append(block.text)
     return "".join(parts).strip()

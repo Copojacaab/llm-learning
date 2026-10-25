@@ -1,0 +1,26 @@
+{
+    "invoice_001.txt": {
+        "invoice_number": "2026/0417",
+        "invoice_date": "03/09/2026",
+        "supplier_name": "Ferramenta Rossi S.R.L.",
+        "supplier_vat": "IT01234567890",
+        "total": 1288.32,
+        "order_number": null
+    },
+    "invoice_002.txt": {
+        "invoice_number": "318",
+        "invoice_date": "15 ottobre 2026",
+        "supplier_name": "Edilnova Costruzioni S.r.l.",
+        "supplier_vat": "IT02468013579",
+        "total": 2440.0,
+        "order_number": "ORD-2291"
+    },
+    "invoice_003.txt": {
+        "invoice_number": "58/A",
+        "invoice_date": "02.10.2026",
+        "supplier_name": "Studio Tecnico Geom. Marco Ferri",
+        "supplier_vat": "IT03692581470",
+        "total": 640.5,
+        "order_number": "DDT n. 334 del 30.09.2026"
+    }
+}
